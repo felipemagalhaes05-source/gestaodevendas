@@ -255,7 +255,7 @@ app.get("/relatorio/pdf", auth, (req, res) => {
 
 // =======================
 app.get("/", (req, res) => {
-  res.send("TESTE NOVO FUNCIONANDO");
+  res.sendFile(__dirname + "/index.html");
 });
 app.get("/debug", (req, res) => {
   res.json(db);
