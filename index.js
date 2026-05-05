@@ -254,10 +254,13 @@ app.get("/relatorio/pdf", auth, (req, res) => {
 });
 
 // =======================
+app.get("/", (req, res) => {
+  res.send("Sistema Irany Gestão está online!");
+});
+
 app.get("/debug", (req, res) => {
   res.json(db);
 });
-
 // =======================
 const PORT = process.env.PORT || 3000;
 
