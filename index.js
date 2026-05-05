@@ -473,12 +473,12 @@ app.get("/relatorio/pdf", auth, (req, res) => {
 
   const r = db.relatorios[mes];
 
-  doc.fontSize(20).text(\`Relatório \${mes}\`);
-  doc.moveDown();
-  doc.text(\`Faturamento: \${r.faturamento}\`);
-  doc.text(\`Custo: \${r.custo}\`);
-  doc.text(\`Lucro: \${r.lucro}\`);
-  doc.text(\`Fechado: \${r.fechado}\`);
+  doc.fontSize(20).text(`Relatório ${mes}`);
+doc.moveDown();
+doc.text(`Faturamento: ${r.faturamento}`);
+doc.text(`Custo: ${r.custo}`);
+doc.text(`Lucro: ${r.lucro}`);
+doc.text(`Fechado: ${r.fechado}`);
 
   doc.end();
 });
