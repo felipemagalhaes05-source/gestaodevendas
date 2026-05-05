@@ -2,24 +2,20 @@ const express = require("express");
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
 const PDFDocument = require("pdfkit");
+const path = require("path");
 
 const app = express();
 app.use(express.json());
 
-// =======================
 const SECRET = "senha_super_secreta";
 const DATA_FILE = "banco.json";
 
-// =======================
 let db = {
   cabelos: [],
   produtos: [],
   relatorios: {}
 };
 
-// =======================
-// CARREGAR / SALVAR
-// =======================
 if (fs.existsSync(DATA_FILE)) {
   db = JSON.parse(fs.readFileSync(DATA_FILE));
 }
@@ -28,9 +24,10 @@ function salvar() {
   fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
 }
 
-// =======================
-// LOGIN
-// =======================
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
 app.post("/login", (req, res) => {
   if (req.body.senha !== "1234") {
     return res.status(401).send("Senha incorreta");
@@ -52,9 +49,6 @@ function auth(req, res, next) {
   }
 }
 
-// =======================
-// DATA
-// =======================
 function getMesAtual() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -71,9 +65,6 @@ function garantirRelatorio(mes) {
   }
 }
 
-// =======================
-// CABELOS
-// =======================
 app.post("/cabelos", auth, (req, res) => {
   const { tipo, peso_total, valor_grama_venda, valor_grama_custo } = req.body;
 
@@ -91,9 +82,6 @@ app.post("/cabelos", auth, (req, res) => {
   res.json({ mensagem: "Cabelo cadastrado" });
 });
 
-// =======================
-// ADICIONAR CÓDIGOS
-// =======================
 app.post("/cabelos/:id/lote", auth, (req, res) => {
   const cabelo = db.cabelos.find(c => c.id == req.params.id);
   if (!cabelo) return res.status(404).send("Não encontrado");
@@ -111,12 +99,12 @@ app.post("/cabelos/:id/lote", auth, (req, res) => {
   res.json(cabelo);
 });
 
-// =======================
-// ALTERAR STATUS
-// =======================
 app.patch("/cabelos/:id/item/:codigo/status", auth, (req, res) => {
   const cabelo = db.cabelos.find(c => c.id == req.params.id);
+  if (!cabelo) return res.status(404).send("Cabelo não encontrado");
+
   const item = cabelo.itens.find(i => i.codigo == req.params.codigo);
+  if (!item) return res.status(404).send("Código não encontrado");
 
   item.status = req.body.status;
 
@@ -124,12 +112,11 @@ app.patch("/cabelos/:id/item/:codigo/status", auth, (req, res) => {
   res.json(item);
 });
 
-// =======================
-// VENDA CABELOS
-// =======================
 app.post("/cabelos/:id/venda", auth, (req, res) => {
   const cabelo = db.cabelos.find(c => c.id == req.params.id);
-  const { gramas } = req.body;
+  if (!cabelo) return res.status(404).send("Cabelo não encontrado");
+
+  const gramas = Number(req.body.gramas);
 
   const mes = getMesAtual();
   garantirRelatorio(mes);
@@ -157,9 +144,6 @@ app.post("/cabelos/:id/venda", auth, (req, res) => {
   res.json({ mensagem: "Venda registrada" });
 });
 
-// =======================
-// PRODUTOS
-// =======================
 app.post("/produtos", auth, (req, res) => {
   const { nome, quantidade, valor_unitario_venda, valor_unitario_custo } = req.body;
 
@@ -168,8 +152,8 @@ app.post("/produtos", auth, (req, res) => {
     nome,
     quantidade: Number(quantidade),
     vendidos: 0,
-    valor_unitario_venda,
-    valor_unitario_custo
+    valor_unitario_venda: Number(valor_unitario_venda),
+    valor_unitario_custo: Number(valor_unitario_custo)
   });
 
   salvar();
@@ -178,7 +162,9 @@ app.post("/produtos", auth, (req, res) => {
 
 app.post("/produtos/:id/venda", auth, (req, res) => {
   const produto = db.produtos.find(p => p.id == req.params.id);
-  const { quantidade } = req.body;
+  if (!produto) return res.status(404).send("Produto não encontrado");
+
+  const quantidade = Number(req.body.quantidade);
 
   const mes = getMesAtual();
   garantirRelatorio(mes);
@@ -206,9 +192,6 @@ app.post("/produtos/:id/venda", auth, (req, res) => {
   res.json({ mensagem: "Venda produto registrada" });
 });
 
-// =======================
-// RELATÓRIOS
-// =======================
 app.get("/relatorio/mes", auth, (req, res) => {
   const mes = getMesAtual();
   garantirRelatorio(mes);
@@ -229,9 +212,6 @@ app.post("/relatorio/fechar", auth, (req, res) => {
   res.json({ mensagem: "Mês fechado" });
 });
 
-// =======================
-// PDF
-// =======================
 app.get("/relatorio/pdf", auth, (req, res) => {
   const mes = getMesAtual();
   garantirRelatorio(mes);
@@ -253,14 +233,10 @@ app.get("/relatorio/pdf", auth, (req, res) => {
   doc.end();
 });
 
-// =======================
-app.get("/", (req, res) => {
-  res.sendFile(__dirname + "/index.html");
-});
 app.get("/debug", (req, res) => {
   res.json(db);
 });
-// =======================
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
