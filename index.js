@@ -25,9 +25,128 @@ function salvar() {
 
 app.get("/", (req, res) => {
   res.send(`
-    <h1>Irany Gestão</h1>
-    <p>Sistema online funcionando.</p>
-    <p>Rotas disponíveis: /debug, /login, /cabelos, /produtos, /relatorio/mes</p>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Irany Gestão</title>
+<style>
+body{font-family:Arial;background:#f3f4f6;margin:0;padding:30px}
+.container{max-width:1000px;margin:auto}
+.card{background:white;padding:20px;margin-bottom:20px;border-radius:12px;box-shadow:0 0 12px #0002}
+input,button{padding:10px;margin:5px;border-radius:6px;border:1px solid #ccc}
+button{background:#111;color:white;cursor:pointer}
+h1{text-align:center}
+pre{background:#111;color:#0f0;padding:15px;border-radius:8px;overflow:auto}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Irany Gestão</h1>
+
+<div class="card">
+<h2>Login</h2>
+<input id="senha" placeholder="Senha" type="password" value="1234">
+<button onclick="login()">Entrar</button>
+<p id="status"></p>
+</div>
+
+<div class="card">
+<h2>Cadastrar Cabelo</h2>
+<input id="tipo" placeholder="Tipo do cabelo">
+<input id="peso" placeholder="Peso total em gramas" type="number">
+<input id="vendaGrama" placeholder="Valor grama venda" type="number">
+<input id="custoGrama" placeholder="Valor grama custo" type="number">
+<button onclick="cadastrarCabelo()">Cadastrar</button>
+</div>
+
+<div class="card">
+<h2>Cadastrar Produto</h2>
+<input id="nomeProduto" placeholder="Nome do produto">
+<input id="qtdProduto" placeholder="Quantidade" type="number">
+<input id="vendaProduto" placeholder="Valor venda" type="number">
+<input id="custoProduto" placeholder="Valor custo" type="number">
+<button onclick="cadastrarProduto()">Cadastrar</button>
+</div>
+
+<div class="card">
+<h2>Dados do Sistema</h2>
+<button onclick="carregarDados()">Atualizar Dados</button>
+<pre id="dados">Clique em atualizar dados</pre>
+</div>
+</div>
+
+<script>
+let token = "";
+
+async function login(){
+  const senha = document.getElementById("senha").value;
+  const r = await fetch("/login", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({senha})
+  });
+
+  if(!r.ok){
+    document.getElementById("status").innerText = "Senha incorreta";
+    return;
+  }
+
+  const data = await r.json();
+  token = data.token;
+  document.getElementById("status").innerText = "Login feito com sucesso";
+}
+
+async function cadastrarCabelo(){
+  if(!token) return alert("Faça login primeiro");
+
+  await fetch("/cabelos", {
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":token
+    },
+    body:JSON.stringify({
+      tipo:document.getElementById("tipo").value,
+      peso_total:Number(document.getElementById("peso").value),
+      valor_grama_venda:Number(document.getElementById("vendaGrama").value),
+      valor_grama_custo:Number(document.getElementById("custoGrama").value)
+    })
+  });
+
+  alert("Cabelo cadastrado");
+  carregarDados();
+}
+
+async function cadastrarProduto(){
+  if(!token) return alert("Faça login primeiro");
+
+  await fetch("/produtos", {
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":token
+    },
+    body:JSON.stringify({
+      nome:document.getElementById("nomeProduto").value,
+      quantidade:Number(document.getElementById("qtdProduto").value),
+      valor_unitario_venda:Number(document.getElementById("vendaProduto").value),
+      valor_unitario_custo:Number(document.getElementById("custoProduto").value)
+    })
+  });
+
+  alert("Produto cadastrado");
+  carregarDados();
+}
+
+async function carregarDados(){
+  const r = await fetch("/debug");
+  const data = await r.json();
+  document.getElementById("dados").innerText = JSON.stringify(data,null,2);
+}
+</script>
+</body>
+</html>
   `);
 });
 
