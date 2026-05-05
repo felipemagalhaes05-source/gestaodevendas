@@ -6,7 +6,7 @@ const PDFDocument = require("pdfkit");
 const app = express();
 app.use(express.json());
 
-const SECRET = "1234";
+const SECRET = "senha_super_secreta";
 const DATA_FILE = "banco.json";
 
 let db = {
@@ -15,9 +15,6 @@ let db = {
   relatorios: {}
 };
 
-// =======================
-// SALVAR / CARREGAR
-// =======================
 if (fs.existsSync(DATA_FILE)) {
   db = JSON.parse(fs.readFileSync(DATA_FILE));
 }
@@ -26,65 +23,14 @@ function salvar() {
   fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2));
 }
 
-// =======================
-// SITE (SEM HTML EXTERNO)
-// =======================
 app.get("/", (req, res) => {
   res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Irany Gestão</title>
-      <style>
-        body {
-          font-family: Arial;
-          background: #f4f4f4;
-          text-align: center;
-          padding: 50px;
-        }
-        .card {
-          background: white;
-          padding: 30px;
-          border-radius: 10px;
-          box-shadow: 0 0 10px rgba(0,0,0,0.2);
-        }
-        button {
-          padding: 10px 20px;
-          background: black;
-          color: white;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="card">
-        <h1>Irany Gestão</h1>
-        <p>Sistema funcionando 🚀</p>
-        <button onclick="verDados()">Ver dados</button>
-        <pre id="dados"></pre>
-      </div>
-
-      <script>
-        function verDados() {
-          fetch("/debug")
-            .then(res => res.json())
-            .then(data => {
-              document.getElementById("dados").innerText =
-                JSON.stringify(data, null, 2);
-            });
-        }
-      </script>
-    </body>
-    </html>
+    <h1>Irany Gestão</h1>
+    <p>Sistema online funcionando.</p>
+    <p>Rotas disponíveis: /debug, /login, /cabelos, /produtos, /relatorio/mes</p>
   `);
 });
 
-// =======================
-// LOGIN
-// =======================
 app.post("/login", (req, res) => {
   if (req.body.senha !== "1234") {
     return res.status(401).send("Senha incorreta");
@@ -106,9 +52,6 @@ function auth(req, res, next) {
   }
 }
 
-// =======================
-// RELATÓRIOS
-// =======================
 function getMesAtual() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -125,61 +68,181 @@ function garantirRelatorio(mes) {
   }
 }
 
-// =======================
-// CABELOS
-// =======================
 app.post("/cabelos", auth, (req, res) => {
-  const { tipo, peso_total } = req.body;
+  const { tipo, peso_total, valor_grama_venda, valor_grama_custo } = req.body;
 
   db.cabelos.push({
     id: Date.now(),
     tipo,
     peso_total: Number(peso_total),
-    vendidos: 0
+    gramas_vendidas: 0,
+    valor_grama_venda: Number(valor_grama_venda),
+    valor_grama_custo: Number(valor_grama_custo),
+    itens: []
   });
 
   salvar();
   res.json({ mensagem: "Cabelo cadastrado" });
 });
 
-// =======================
-// PRODUTOS
-// =======================
+app.post("/cabelos/:id/lote", auth, (req, res) => {
+  const cabelo = db.cabelos.find(c => c.id == req.params.id);
+  if (!cabelo) return res.status(404).send("Não encontrado");
+
+  const { codigos } = req.body;
+
+  if (!Array.isArray(codigos)) {
+    return res.status(400).send("Envie codigos como uma lista");
+  }
+
+  codigos.forEach(codigo => {
+    cabelo.itens.push({
+      codigo,
+      status: "disponivel"
+    });
+  });
+
+  salvar();
+  res.json(cabelo);
+});
+
+app.patch("/cabelos/:id/item/:codigo/status", auth, (req, res) => {
+  const cabelo = db.cabelos.find(c => c.id == req.params.id);
+  if (!cabelo) return res.status(404).send("Cabelo não encontrado");
+
+  const item = cabelo.itens.find(i => i.codigo == req.params.codigo);
+  if (!item) return res.status(404).send("Código não encontrado");
+
+  item.status = req.body.status;
+  salvar();
+  res.json(item);
+});
+
+app.post("/cabelos/:id/venda", auth, (req, res) => {
+  const cabelo = db.cabelos.find(c => c.id == req.params.id);
+  if (!cabelo) return res.status(404).send("Cabelo não encontrado");
+
+  const gramas = Number(req.body.gramas);
+  const mes = getMesAtual();
+  garantirRelatorio(mes);
+
+  if (db.relatorios[mes].fechado) {
+    return res.status(400).send("Mês fechado");
+  }
+
+  const estoque = cabelo.peso_total - cabelo.gramas_vendidas;
+
+  if (gramas > estoque) {
+    return res.status(400).send("Sem estoque");
+  }
+
+  cabelo.gramas_vendidas += gramas;
+
+  const faturamento = gramas * cabelo.valor_grama_venda;
+  const custo = gramas * cabelo.valor_grama_custo;
+
+  db.relatorios[mes].faturamento += faturamento;
+  db.relatorios[mes].custo += custo;
+  db.relatorios[mes].lucro += faturamento - custo;
+
+  salvar();
+  res.json({ mensagem: "Venda registrada" });
+});
+
 app.post("/produtos", auth, (req, res) => {
-  const { nome, quantidade } = req.body;
+  const { nome, quantidade, valor_unitario_venda, valor_unitario_custo } = req.body;
 
   db.produtos.push({
     id: Date.now(),
     nome,
-    quantidade: Number(quantidade)
+    quantidade: Number(quantidade),
+    vendidos: 0,
+    valor_unitario_venda: Number(valor_unitario_venda),
+    valor_unitario_custo: Number(valor_unitario_custo)
   });
 
   salvar();
   res.json({ mensagem: "Produto cadastrado" });
 });
 
-// =======================
-// DEBUG
-// =======================
+app.post("/produtos/:id/venda", auth, (req, res) => {
+  const produto = db.produtos.find(p => p.id == req.params.id);
+  if (!produto) return res.status(404).send("Produto não encontrado");
+
+  const quantidade = Number(req.body.quantidade);
+  const mes = getMesAtual();
+  garantirRelatorio(mes);
+
+  if (db.relatorios[mes].fechado) {
+    return res.status(400).send("Mês fechado");
+  }
+
+  const estoque = produto.quantidade - produto.vendidos;
+
+  if (quantidade > estoque) {
+    return res.status(400).send("Sem estoque");
+  }
+
+  produto.vendidos += quantidade;
+
+  const faturamento = quantidade * produto.valor_unitario_venda;
+  const custo = quantidade * produto.valor_unitario_custo;
+
+  db.relatorios[mes].faturamento += faturamento;
+  db.relatorios[mes].custo += custo;
+  db.relatorios[mes].lucro += faturamento - custo;
+
+  salvar();
+  res.json({ mensagem: "Venda produto registrada" });
+});
+
+app.get("/relatorio/mes", auth, (req, res) => {
+  const mes = getMesAtual();
+  garantirRelatorio(mes);
+  res.json(db.relatorios[mes]);
+});
+
+app.get("/relatorio/historico", auth, (req, res) => {
+  res.json(db.relatorios);
+});
+
+app.post("/relatorio/fechar", auth, (req, res) => {
+  const mes = getMesAtual();
+  garantirRelatorio(mes);
+
+  db.relatorios[mes].fechado = true;
+  salvar();
+
+  res.json({ mensagem: "Mês fechado" });
+});
+
+app.get("/relatorio/pdf", auth, (req, res) => {
+  const mes = getMesAtual();
+  garantirRelatorio(mes);
+
+  const doc = new PDFDocument();
+  res.setHeader("Content-Type", "application/pdf");
+
+  doc.pipe(res);
+
+  const r = db.relatorios[mes];
+
+  doc.fontSize(20).text(`Relatório ${mes}`);
+  doc.moveDown();
+  doc.text(`Faturamento: ${r.faturamento}`);
+  doc.text(`Custo: ${r.custo}`);
+  doc.text(`Lucro: ${r.lucro}`);
+  doc.text(`Fechado: ${r.fechado}`);
+
+  doc.end();
+});
+
 app.get("/debug", (req, res) => {
   res.json(db);
 });
 
-// =======================
-// PDF
-// =======================
-app.get("/pdf", (req, res) => {
-  const doc = new PDFDocument();
-  res.setHeader("Content-Type", "application/pdf");
-  doc.pipe(res);
-
-  doc.text("Relatório");
-  doc.end();
-});
-
-// =======================
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("🔥 rodando");
+  console.log("🔥 Sistema completo rodando");
 });
