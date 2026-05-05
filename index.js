@@ -25,7 +25,49 @@ function salvar() {
 }
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Irany Gestão</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          background: #f4f4f4;
+          text-align: center;
+          padding: 50px;
+        }
+        .card {
+          background: white;
+          max-width: 500px;
+          margin: auto;
+          padding: 30px;
+          border-radius: 12px;
+          box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+          color: #222;
+        }
+        button {
+          padding: 12px 20px;
+          border: none;
+          background: #111;
+          color: white;
+          border-radius: 8px;
+          cursor: pointer;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <h1>Irany Gestão</h1>
+        <p>Sistema de controle de vendas, estoque e relatórios online.</p>
+        <button onclick="alert('Sistema funcionando!')">Entrar no sistema</button>
+      </div>
+    </body>
+    </html>
+  `);
 });
 
 app.post("/login", (req, res) => {
