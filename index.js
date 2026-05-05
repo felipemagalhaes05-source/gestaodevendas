@@ -84,7 +84,7 @@ app.post("/cabelos", auth, (req, res) => {
     gramas_vendidas: 0,
     valor_grama_venda: Number(valor_grama_venda),
     valor_grama_custo: Number(valor_grama_custo),
-    itens: [] // 👈 CÓDIGOS VOLTARAM
+    itens: []
   });
 
   salvar();
@@ -112,7 +112,7 @@ app.post("/cabelos/:id/lote", auth, (req, res) => {
 });
 
 // =======================
-// ALTERAR STATUS DOS CÓDIGOS
+// ALTERAR STATUS
 // =======================
 app.patch("/cabelos/:id/item/:codigo/status", auth, (req, res) => {
   const cabelo = db.cabelos.find(c => c.id == req.params.id);
@@ -125,7 +125,7 @@ app.patch("/cabelos/:id/item/:codigo/status", auth, (req, res) => {
 });
 
 // =======================
-// VENDA POR GRAMAS (FINANCEIRO REAL)
+// VENDA CABELOS
 // =======================
 app.post("/cabelos/:id/venda", auth, (req, res) => {
   const cabelo = db.cabelos.find(c => c.id == req.params.id);
