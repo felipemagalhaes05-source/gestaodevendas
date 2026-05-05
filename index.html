@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Irany Gestão</title>
+</head>
+<body style="font-family: Arial; text-align:center; margin-top:50px;">
+
+  <h1>💼 Sistema Irany Gestão</h1>
+  <p>Seu sistema está online!</p>
+
+  <button onclick="verDados()">Ver Dados</button>
+
+  <pre id="resultado"></pre>
+
+  <script>
+    function verDados() {
+      fetch("https://gestaodevendaslojaonline.onrender.com/debug")
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("resultado").innerText =
+            JSON.stringify(data, null, 2);
+        });
+    }
+  </script>
+
+</body>
+</html>
