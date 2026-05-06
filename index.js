@@ -1,21 +1,14 @@
-const mongoose = require("mongoose");
-
-mongoose.connect("mongodb+srv://felipe:SENHA@cluster0.mongodb.net/?retryWrites=true&w=majority");
-
-console.log("Mongo conectado");
-
-const Cabelo = require("./models/Cabelo");
-const Produto = require("./models/Produto");
-const Venda = require("./models/Venda");
-const mongoose = require("mongoose");
-
-mongoose.connect("mongodb+srv://felipe:SENHA@cluster0.mongodb.net/?retryWrites=true&w=majority");
-
-console.log("Mongo conectado");
 const express = require("express");
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
 const PDFDocument = require("pdfkit");
+const mongoose = require("mongoose");
+
+mongoose.connect("mongodb+srv://felipegomes0155:<db_password>@felipegomes0155.cyizlmj.mongodb.net/?appName=felipegomes0155");
+
+const Cabelo = require("./models/Cabelo");
+const Produto = require("./models/Produto");
+const Venda = require("./models/Venda");
 
 const app = express();
 app.use(express.json());
