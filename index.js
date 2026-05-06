@@ -1,3 +1,17 @@
+const mongoose = require("mongoose");
+
+mongoose.connect("mongodb+srv://felipe:SENHA@cluster0.mongodb.net/?retryWrites=true&w=majority");
+
+console.log("Mongo conectado");
+
+const Cabelo = require("./models/Cabelo");
+const Produto = require("./models/Produto");
+const Venda = require("./models/Venda");
+const mongoose = require("mongoose");
+
+mongoose.connect("mongodb+srv://felipe:SENHA@cluster0.mongodb.net/?retryWrites=true&w=majority");
+
+console.log("Mongo conectado");
 const express = require("express");
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
