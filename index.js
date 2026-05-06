@@ -4,11 +4,15 @@ const jwt = require("jsonwebtoken");
 const PDFDocument = require("pdfkit");
 const mongoose = require("mongoose");
 
-mongoose.connect("mongodb+srv://felipegomes0155:<db_password>@felipegomes0155.cyizlmj.mongodb.net/?appName=felipegomes0155");
+mongoose.connect("mongodb+srv://felipegomes0155:felipemaga123@felipegomes0155.cyizlmj.mongodb.net/gestaocabelos?retryWrites=true&w=majority&appName=felipegomes0155");
 
-const Cabelo = require("./models/Cabelo");
-const Produto = require("./models/Produto");
-const Venda = require("./models/Venda");
+mongoose.connection.on("connected", () => {
+  console.log("✅ MongoDB conectado");
+});
+
+mongoose.connection.on("error", (err) => {
+  console.log("❌ Erro Mongo:", err);
+});
 
 const app = express();
 app.use(express.json());
@@ -397,7 +401,7 @@ function limparCabelo(){
 }
 
 function montarEditorCodigos(itens){
-  editorCodigos.innerHTML = "<h4>Status dos códigos</h4>" + itens.map(function(i,idx){
+  editorCodigos.innerHTML = "<h4>Status dos códigos</h4>" + itens.map(function(i){
     return '<div class="codigo-line"><span>'+i.codigo+'</span><select data-codigo="'+i.codigo+'"><option '+(i.status==="disponivel"?"selected":"")+' value="disponivel">Disponível</option><option '+(i.status==="reservado"?"selected":"")+' value="reservado">Reservado</option><option '+(i.status==="vendido"?"selected":"")+' value="vendido">Vendido</option></select></div>';
   }).join("");
 }
@@ -549,7 +553,7 @@ verificarToken();
 </script>
 </body>
 </html>
-`);
+  `);
 });
 
 app.post("/login", (req, res) => {
