@@ -9,6 +9,9 @@ app.use(express.json());
 const SECRET = "senha_super_secreta";
 const DATA_FILE = "banco.json";
 
+const USER_LOGIN = "felipegomes0155";
+const USER_PASSWORD = "felipemaga123";
+
 let db = {
   cabelos: [],
   produtos: [],
@@ -40,7 +43,7 @@ function garantirRelatorio(mes) {
 }
 
 function auth(req, res, next) {
-  const token = req.headers.authorization;
+  const token = req.headers.authorization || req.query.token;
   if (!token) return res.status(401).send("Sem token");
 
   try {
@@ -51,6 +54,26 @@ function auth(req, res, next) {
   }
 }
 
+function normalizarBanco() {
+  db.cabelos.forEach(c => {
+    c.gramas_vendidas = Number(c.gramas_vendidas || 0);
+    c.faturamento = Number(c.faturamento || 0);
+    c.custo = Number(c.custo || 0);
+    c.lucro = Number(c.lucro || 0);
+    c.itens = Array.isArray(c.itens) ? c.itens : [];
+  });
+
+  db.produtos.forEach(p => {
+    p.vendidos = Number(p.vendidos || 0);
+    p.faturamento = Number(p.faturamento || 0);
+    p.custo = Number(p.custo || 0);
+    p.lucro = Number(p.lucro || 0);
+  });
+}
+
+normalizarBanco();
+salvar();
+
 app.get("/", (req, res) => {
   res.send(`
 <!DOCTYPE html>
@@ -60,54 +83,71 @@ app.get("/", (req, res) => {
 <title>Gestão de Cabelos</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#faf9f7;color:#111}
-.app{display:flex;min-height:100vh}
-.sidebar{width:224px;background:#fff;border-right:1px solid #ddd;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#faf8f5;color:#111}
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#fff7ed,#fed7aa,#f97316)}
+.login-box{width:360px;background:white;padding:30px;border-radius:18px;box-shadow:0 20px 50px #0003}
+.login-box h1{margin:0 0 5px}
+.login-box p{color:#777}
+input,textarea,select{width:100%;padding:11px;border:1px solid #ddd;border-radius:8px;margin:6px 0 12px;background:white}
+button{cursor:pointer}
+.btn{border:0;border-radius:8px;padding:10px 15px;font-weight:700}
+.btn-orange{background:#d96213;color:white}
+.btn-light{background:#f4eee9;color:#111;border:1px solid #ddd}
+.btn-red{background:#dc2626;color:white}
+.btn-dark{background:#111;color:white}
+.app{display:none;min-height:100vh}
+.sidebar{width:240px;background:white;border-right:1px solid #ddd;position:fixed;top:0;left:0;bottom:0}
 .brand{padding:20px;border-bottom:1px solid #ddd}
-.brand h2{margin:0;font-size:18px;font-weight:800}
-.brand p{margin:6px 0 0;color:#777;font-size:13px}
-.menu{padding:18px 0;flex:1}
-.menu button{width:100%;background:transparent;border:0;text-align:left;padding:13px 20px;font-size:15px;cursor:pointer;color:#111;display:flex;gap:10px;align-items:center}
+.brand h2{margin:0;font-size:18px}
+.versiculo{font-size:12px;color:#a4490c;margin-top:8px;font-style:italic;line-height:1.4}
+.menu{padding:18px 0}
+.menu button{width:100%;background:transparent;border:0;text-align:left;padding:13px 20px;font-size:15px;color:#111}
 .menu button:hover,.menu button.active{background:#f4eee9;color:#c95b12;font-weight:700}
-.sair{border-top:1px solid #ddd;padding:16px 20px;color:#777}
-.main{margin-left:224px;padding:34px;flex:1}
+.sair{position:absolute;bottom:0;left:0;right:0;padding:16px 20px;border-top:1px solid #ddd;color:#777}
+.main{margin-left:240px;padding:34px}
 .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px}
 .top h1{margin:0;font-size:25px}
 .top p{margin:4px 0 0;color:#777}
-.btn{border:0;border-radius:8px;padding:10px 15px;cursor:pointer;font-weight:700}
-.btn-orange{background:#d96213;color:#fff}
-.btn-light{background:#f4eee9;color:#111;border:1px solid #ddd}
-.btn-red{background:#dc2626;color:#fff}
-.btn-dark{background:#111;color:#fff}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:30px}
-.card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:20px;box-shadow:0 2px 5px rgba(0,0,0,.08)}
-.kpi-title{color:#666;font-size:13px;text-transform:uppercase;letter-spacing:.4px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:26px}
+.card{background:white;border:1px solid #ddd;border-radius:12px;padding:20px;box-shadow:0 2px 5px #0001;margin-bottom:18px}
+.kpi-title{color:#666;font-size:13px;text-transform:uppercase}
 .kpi-value{font-size:26px;font-weight:800;margin-top:8px}
 .orange{color:#d96213}
 .red{color:#dc2626}
 .green{color:#16a34a}
-.table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #ddd;border-radius:10px;overflow:hidden}
-.table th,.table td{padding:17px;border-bottom:1px solid #ddd;text-align:left;font-size:14px}
-.table th{color:#6b625c;background:#f8f6f4;font-size:13px}
-.table tr:last-child td{border-bottom:0}
 .page{display:none}
 .page.active{display:block}
-input,textarea{width:100%;padding:11px;border:1px solid #ddd;border-radius:8px;margin:6px 0 12px;background:#fff}
-label{font-size:13px;color:#555;font-weight:700}
 .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
-.actions{display:flex;gap:8px;flex-wrap:wrap}
-.badge{background:#f4eee9;border-radius:7px;padding:5px 10px;font-weight:700}
-.section-title{margin:28px 0 14px;font-size:17px}
+.table{width:100%;border-collapse:collapse;background:white;border:1px solid #ddd;border-radius:10px;overflow:hidden}
+.table th,.table td{padding:14px;border-bottom:1px solid #ddd;text-align:left;font-size:14px}
+.table th{background:#f8f6f4;color:#6b625c}
+.badge{background:#f4eee9;border-radius:7px;padding:5px 10px;font-weight:700;display:inline-block;margin:2px}
+.codigo-line{display:flex;gap:8px;align-items:center;margin-bottom:8px;background:#faf7f3;padding:8px;border-radius:8px}
+.codigo-line span{flex:1;font-weight:700}
+.codigo-line select{width:160px;margin:0}
+.frase-relatorio{background:#fff7ed;border:1px solid #fdba74;color:#9a3412;padding:13px;border-radius:10px;margin-bottom:18px;font-style:italic}
 pre{background:#111;color:#9cffb1;padding:15px;border-radius:10px;white-space:pre-wrap}
-@media(max-width:900px){.grid,.form-grid{grid-template-columns:1fr}.sidebar{width:190px}.main{margin-left:190px;padding:22px}}
+@media(max-width:900px){.grid,.form-grid{grid-template-columns:1fr}.sidebar{width:200px}.main{margin-left:200px;padding:22px}}
 </style>
 </head>
 <body>
-<div class="app">
+
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <h1>Gestão de Cabelos</h1>
+    <p>Acesso privado</p>
+    <input id="loginUsuario" placeholder="Login">
+    <input id="loginSenha" type="password" placeholder="Senha">
+    <button class="btn btn-orange" onclick="fazerLogin()">Entrar</button>
+    <p id="loginErro" class="red"></p>
+  </div>
+</div>
+
+<div id="app" class="app">
   <aside class="sidebar">
     <div class="brand">
       <h2>Gestão de Cabelos</h2>
-      <p>Sistema de controle</p>
+      <div class="versiculo">“Os que olham para ti estão radiantes, Senhor.”</div>
     </div>
 
     <div class="menu">
@@ -117,11 +157,10 @@ pre{background:#111;color:#9cffb1;padding:15px;border-radius:10px;white-space:pr
       <button onclick="abrir('relatorios',this)">▥ Relatórios</button>
     </div>
 
-    <div class="sair">↪ Sair</div>
+    <div class="sair" onclick="sair()">↪ Sair</div>
   </aside>
 
   <main class="main">
-
     <section id="dashboard" class="page active">
       <div class="top">
         <div>
@@ -133,10 +172,10 @@ pre{background:#111;color:#9cffb1;padding:15px;border-radius:10px;white-space:pr
       <div class="grid">
         <div class="card"><div class="kpi-title">Faturamento do mês</div><div id="kpiFat" class="kpi-value">R$ 0,00</div></div>
         <div class="card"><div class="kpi-title">Lucro do mês</div><div id="kpiLucro" class="kpi-value orange">R$ 0,00</div></div>
-        <div class="card"><div class="kpi-title">Estoque cabelo (gramas)</div><div id="kpiEstoqueCabelo" class="kpi-value">0g</div></div>
+        <div class="card"><div class="kpi-title">Estoque cabelo</div><div id="kpiEstoqueCabelo" class="kpi-value">0g</div></div>
         <div class="card"><div class="kpi-title">Estoque produtos</div><div id="kpiEstoqueProduto" class="kpi-value">0</div></div>
         <div class="card"><div class="kpi-title">Lotes de cabelo</div><div id="kpiLotes" class="kpi-value">0</div></div>
-        <div class="card"><div class="kpi-title">Produtos cadastrados</div><div id="kpiProdutos" class="kpi-value">0</div></div>
+        <div class="card"><div class="kpi-title">Produtos</div><div id="kpiProdutos" class="kpi-value">0</div></div>
       </div>
 
       <div class="card">
@@ -149,7 +188,7 @@ pre{background:#111;color:#9cffb1;padding:15px;border-radius:10px;white-space:pr
       <div class="top">
         <div>
           <h1>Cabelos</h1>
-          <p>Gerenciar lotes de cabelo</p>
+          <p>Gerenciar lotes, códigos e vendas por grama</p>
         </div>
         <button class="btn btn-orange" onclick="limparCabelo()">+ Novo Lote</button>
       </div>
@@ -168,10 +207,10 @@ pre{background:#111;color:#9cffb1;padding:15px;border-radius:10px;white-space:pr
         <label>Códigos internos do lote</label>
         <textarea id="codigosCabelo" placeholder="Ex: A01, A02, A03"></textarea>
 
-        <div class="actions">
-          <button class="btn btn-orange" onclick="salvarCabelo()">Salvar cabelo</button>
-          <button class="btn btn-light" onclick="limparCabelo()">Limpar</button>
-        </div>
+        <div id="editorCodigos"></div>
+
+        <button class="btn btn-orange" onclick="salvarCabelo()">Salvar cabelo</button>
+        <button class="btn btn-light" onclick="limparCabelo()">Limpar</button>
       </div>
 
       <div class="card">
@@ -183,7 +222,6 @@ pre{background:#111;color:#9cffb1;padding:15px;border-radius:10px;white-space:pr
         <button class="btn btn-dark" onclick="venderCabelo()">Registrar venda</button>
       </div>
 
-      <h3 class="section-title">Lotes cadastrados</h3>
       <div id="listaCabelos"></div>
     </section>
 
@@ -207,10 +245,8 @@ pre{background:#111;color:#9cffb1;padding:15px;border-radius:10px;white-space:pr
           <div><label>Custo unitário</label><input id="valorCustoProduto" type="number"></div>
         </div>
 
-        <div class="actions">
-          <button class="btn btn-orange" onclick="salvarProduto()">Salvar produto</button>
-          <button class="btn btn-light" onclick="limparProduto()">Limpar</button>
-        </div>
+        <button class="btn btn-orange" onclick="salvarProduto()">Salvar produto</button>
+        <button class="btn btn-light" onclick="limparProduto()">Limpar</button>
       </div>
 
       <div class="card">
@@ -222,7 +258,6 @@ pre{background:#111;color:#9cffb1;padding:15px;border-radius:10px;white-space:pr
         <button class="btn btn-dark" onclick="venderProduto()">Registrar venda</button>
       </div>
 
-      <h3 class="section-title">Produtos cadastrados</h3>
       <div id="listaProdutos"></div>
     </section>
 
@@ -232,11 +267,13 @@ pre{background:#111;color:#9cffb1;padding:15px;border-radius:10px;white-space:pr
           <h1>Relatórios</h1>
           <p id="mesRelatorio"></p>
         </div>
-        <div class="actions">
+        <div>
           <button class="btn btn-light" onclick="baixarPDF()">PDF</button>
           <button class="btn btn-light" onclick="fecharMes()">Fechar Mês</button>
         </div>
       </div>
+
+      <div class="frase-relatorio">Que Deus nos abençoe em cada decisão.</div>
 
       <div class="card">
         <h3>Mês Atual</h3>
@@ -245,28 +282,66 @@ pre{background:#111;color:#9cffb1;padding:15px;border-radius:10px;white-space:pr
           <div><div class="kpi-title">Custo</div><div id="relCusto" class="kpi-value red">R$ 0,00</div></div>
           <div><div class="kpi-title">Lucro</div><div id="relLucro" class="kpi-value orange">R$ 0,00</div></div>
         </div>
-        <hr>
         <p>Margem de lucro: <strong id="relMargem">0%</strong></p>
       </div>
 
-      <h3 class="section-title">Histórico</h3>
       <div id="historico"></div>
     </section>
-
   </main>
 </div>
 
 <script>
-let token = "";
+let token = localStorage.getItem("token") || "";
 
 function moeda(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
-function mesAtualTexto(){return new Date().toLocaleDateString("pt-BR",{month:"long",year:"numeric"})}
+function mesTexto(){return new Date().toLocaleDateString("pt-BR",{month:"long",year:"numeric"})}
 
-async function loginAuto(){
-  const r = await fetch("/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({senha:"1234"})});
+async function fazerLogin(){
+  const usuario = loginUsuario.value;
+  const senha = loginSenha.value;
+
+  const r = await fetch("/login", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({usuario, senha})
+  });
+
+  if(!r.ok){
+    loginErro.innerText = "Login ou senha incorretos";
+    return;
+  }
+
   const data = await r.json();
   token = data.token;
+  localStorage.setItem("token", token);
+  loginScreen.style.display = "none";
+  app.style.display = "flex";
   carregarTudo();
+}
+
+function sair(){
+  localStorage.removeItem("token");
+  token = "";
+  location.reload();
+}
+
+async function api(url, op={}){
+  op.headers = op.headers || {};
+  op.headers.Authorization = token;
+  if(op.body) op.headers["Content-Type"] = "application/json";
+  return fetch(url, op);
+}
+
+async function verificarToken(){
+  if(!token) return;
+  const r = await api("/debug");
+  if(r.ok){
+    loginScreen.style.display = "none";
+    app.style.display = "flex";
+    carregarTudo();
+  } else {
+    localStorage.removeItem("token");
+  }
 }
 
 function abrir(id,btn){
@@ -277,25 +352,17 @@ function abrir(id,btn){
   carregarTudo();
 }
 
-async function api(url,op={}){
-  op.headers = op.headers || {};
-  op.headers.Authorization = token;
-  if(op.body) op.headers["Content-Type"] = "application/json";
-  return fetch(url,op);
-}
-
 async function dados(){
-  const r = await fetch("/debug");
+  const r = await api("/debug");
   return r.json();
 }
 
 async function carregarTudo(){
   const d = await dados();
-  const mes = mesAtualTexto();
-  mesPainel.innerText = mes;
-  mesRelatorio.innerText = mes;
+  mesPainel.innerText = mesTexto();
+  mesRelatorio.innerText = mesTexto();
 
-  const rel = await api("/relatorio/mes").then(r=>r.json()).catch(()=>({faturamento:0,custo:0,lucro:0}));
+  const rel = await api("/relatorio/mes").then(r=>r.json());
 
   kpiFat.innerText = moeda(rel.faturamento);
   kpiLucro.innerText = moeda(rel.lucro);
@@ -319,16 +386,32 @@ function limparCabelo(){
   valorVendaGrama.value="";
   valorCustoGrama.value="";
   codigosCabelo.value="";
+  editorCodigos.innerHTML="";
+}
+
+function montarEditorCodigos(itens){
+  editorCodigos.innerHTML = "<h4>Status dos códigos</h4>" + itens.map(function(i,idx){
+    return '<div class="codigo-line"><span>'+i.codigo+'</span><select data-codigo="'+i.codigo+'"><option '+(i.status==="disponivel"?"selected":"")+' value="disponivel">Disponível</option><option '+(i.status==="reservado"?"selected":"")+' value="reservado">Reservado</option><option '+(i.status==="vendido"?"selected":"")+' value="vendido">Vendido</option></select></div>';
+  }).join("");
+}
+
+function pegarCodigosEditados(){
+  const selects = editorCodigos.querySelectorAll("select");
+  if(selects.length){
+    return Array.from(selects).map(s=>({codigo:s.dataset.codigo,status:s.value}));
+  }
+  return codigosCabelo.value.split(",").map(c=>c.trim()).filter(Boolean).map(c=>({codigo:c,status:"disponivel"}));
 }
 
 async function salvarCabelo(){
-  const codigos = codigosCabelo.value.split(",").map(c=>c.trim()).filter(Boolean);
+  const itens = pegarCodigosEditados();
+
   const body = JSON.stringify({
     tipo: tipoCabelo.value,
     peso_total: Number(pesoTotal.value),
     valor_grama_venda: Number(valorVendaGrama.value),
     valor_grama_custo: Number(valorCustoGrama.value),
-    codigos
+    itens: itens
   });
 
   if(editCabeloId.value){
@@ -349,6 +432,7 @@ function editarCabelo(c){
   valorVendaGrama.value=c.valor_grama_venda;
   valorCustoGrama.value=c.valor_grama_custo;
   codigosCabelo.value=(c.itens||[]).map(i=>i.codigo).join(", ");
+  montarEditorCodigos(c.itens||[]);
   window.scrollTo(0,0);
 }
 
@@ -359,17 +443,18 @@ async function excluirCabelo(id){
 }
 
 async function venderCabelo(){
-  await api("/cabelos/"+idCabeloVenda.value+"/venda",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({gramas:Number(gramasVendidas.value)})});
+  await api("/cabelos/"+idCabeloVenda.value+"/venda",{method:"POST",body:JSON.stringify({gramas:Number(gramasVendidas.value)})});
   idCabeloVenda.value="";
   gramasVendidas.value="";
   carregarTudo();
 }
 
 function listarCabelos(d){
-  listaCabelos.innerHTML = '<table class="table"><tr><th>Tipo</th><th>Total</th><th>Vendido</th><th>Estoque</th><th>R$/g Venda</th><th>Lucro</th><th>Itens</th><th>Ações</th></tr>'+
+  listaCabelos.innerHTML = '<table class="table"><tr><th>Tipo</th><th>Total</th><th>Vendido</th><th>Estoque</th><th>Lucro</th><th>Códigos</th><th>Ações</th></tr>'+
   d.cabelos.map(c=>{
     const estoque = Number(c.peso_total||0)-Number(c.gramas_vendidas||0);
-    return '<tr><td>'+c.tipo+'<br><small>ID '+c.id+'</small></td><td>'+c.peso_total+'g</td><td>'+c.gramas_vendidas+'g</td><td>'+estoque+'g</td><td>'+moeda(c.valor_grama_venda)+'</td><td class="orange">'+moeda(c.lucro)+'</td><td><span class="badge">'+((c.itens||[]).length)+'</span></td><td><button class="btn btn-light" onclick=\\'editarCabelo('+JSON.stringify(c)+')\\'>Editar</button> <button class="btn btn-red" onclick="excluirCabelo('+c.id+')">Excluir</button></td></tr>';
+    const codigos = (c.itens||[]).map(i=>'<span class="badge">'+i.codigo+' - '+i.status+'</span>').join(" ");
+    return '<tr><td>'+c.tipo+'<br><small>ID '+c.id+'</small></td><td>'+c.peso_total+'g</td><td>'+c.gramas_vendidas+'g</td><td>'+estoque+'g</td><td class="orange">'+moeda(c.lucro)+'</td><td>'+codigos+'</td><td><button class="btn btn-light" onclick=\\'editarCabelo('+JSON.stringify(c)+')\\'>Editar</button> <button class="btn btn-red" onclick="excluirCabelo('+c.id+')">Excluir</button></td></tr>';
   }).join("")+'</table>';
 }
 
@@ -417,17 +502,17 @@ async function excluirProduto(id){
 }
 
 async function venderProduto(){
-  await api("/produtos/"+idProdutoVenda.value+"/venda",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({quantidade:Number(qtdProdutoVenda.value)})});
+  await api("/produtos/"+idProdutoVenda.value+"/venda",{method:"POST",body:JSON.stringify({quantidade:Number(qtdProdutoVenda.value)})});
   idProdutoVenda.value="";
   qtdProdutoVenda.value="";
   carregarTudo();
 }
 
 function listarProdutos(d){
-  listaProdutos.innerHTML = '<table class="table"><tr><th>Produto</th><th>Total</th><th>Vendido</th><th>Estoque</th><th>Venda</th><th>Lucro</th><th>Ações</th></tr>'+
+  listaProdutos.innerHTML = '<table class="table"><tr><th>Produto</th><th>Total</th><th>Vendido</th><th>Estoque</th><th>Lucro</th><th>Ações</th></tr>'+
   d.produtos.map(p=>{
     const estoque = Number(p.quantidade||0)-Number(p.vendidos||0);
-    return '<tr><td>'+p.nome+'<br><small>ID '+p.id+'</small></td><td>'+p.quantidade+'</td><td>'+p.vendidos+'</td><td>'+estoque+'</td><td>'+moeda(p.valor_unitario_venda)+'</td><td class="orange">'+moeda(p.lucro)+'</td><td><button class="btn btn-light" onclick=\\'editarProduto('+JSON.stringify(p)+')\\'>Editar</button> <button class="btn btn-red" onclick="excluirProduto('+p.id+')">Excluir</button></td></tr>';
+    return '<tr><td>'+p.nome+'<br><small>ID '+p.id+'</small></td><td>'+p.quantidade+'</td><td>'+p.vendidos+'</td><td>'+estoque+'</td><td class="orange">'+moeda(p.lucro)+'</td><td><button class="btn btn-light" onclick=\\'editarProduto('+JSON.stringify(p)+')\\'>Editar</button> <button class="btn btn-red" onclick="excluirProduto('+p.id+')">Excluir</button></td></tr>';
   }).join("")+'</table>';
 }
 
@@ -453,7 +538,7 @@ function baixarPDF(){
   window.open("/relatorio/pdf?token="+token,"_blank");
 }
 
-loginAuto();
+verificarToken();
 </script>
 </body>
 </html>
@@ -461,12 +546,16 @@ loginAuto();
 });
 
 app.post("/login", (req, res) => {
-  if (req.body.senha !== "1234") return res.status(401).send("Senha incorreta");
-  res.json({ token: jwt.sign({}, SECRET) });
+  if (req.body.usuario !== USER_LOGIN || req.body.senha !== USER_PASSWORD) {
+    return res.status(401).send("Login ou senha incorretos");
+  }
+
+  res.json({ token: jwt.sign({ usuario: USER_LOGIN }, SECRET) });
 });
 
 app.post("/cabelos", auth, (req, res) => {
-  const { tipo, peso_total, valor_grama_venda, valor_grama_custo, codigos } = req.body;
+  const { tipo, peso_total, valor_grama_venda, valor_grama_custo, itens } = req.body;
+
   db.cabelos.push({
     id: Date.now(),
     tipo,
@@ -477,8 +566,9 @@ app.post("/cabelos", auth, (req, res) => {
     faturamento: 0,
     custo: 0,
     lucro: 0,
-    itens: Array.isArray(codigos) ? codigos.map(codigo => ({ codigo, status: "disponivel" })) : []
+    itens: Array.isArray(itens) ? itens : []
   });
+
   salvar();
   res.json({ mensagem: "Cabelo cadastrado" });
 });
@@ -491,7 +581,7 @@ app.put("/cabelos/:id", auth, (req, res) => {
   cabelo.peso_total = Number(req.body.peso_total);
   cabelo.valor_grama_venda = Number(req.body.valor_grama_venda);
   cabelo.valor_grama_custo = Number(req.body.valor_grama_custo);
-  cabelo.itens = Array.isArray(req.body.codigos) ? req.body.codigos.map(codigo => ({ codigo, status: "disponivel" })) : cabelo.itens;
+  cabelo.itens = Array.isArray(req.body.itens) ? req.body.itens : cabelo.itens;
 
   salvar();
   res.json(cabelo);
@@ -521,9 +611,9 @@ app.post("/cabelos/:id/venda", auth, (req, res) => {
   const lucro = faturamento - custo;
 
   cabelo.gramas_vendidas += gramas;
-  cabelo.faturamento = (cabelo.faturamento || 0) + faturamento;
-  cabelo.custo = (cabelo.custo || 0) + custo;
-  cabelo.lucro = (cabelo.lucro || 0) + lucro;
+  cabelo.faturamento += faturamento;
+  cabelo.custo += custo;
+  cabelo.lucro += lucro;
 
   db.relatorios[mes].faturamento += faturamento;
   db.relatorios[mes].custo += custo;
@@ -535,6 +625,7 @@ app.post("/cabelos/:id/venda", auth, (req, res) => {
 
 app.post("/produtos", auth, (req, res) => {
   const { nome, quantidade, valor_unitario_venda, valor_unitario_custo } = req.body;
+
   db.produtos.push({
     id: Date.now(),
     nome,
@@ -546,6 +637,7 @@ app.post("/produtos", auth, (req, res) => {
     custo: 0,
     lucro: 0
   });
+
   salvar();
   res.json({ mensagem: "Produto cadastrado" });
 });
@@ -587,9 +679,9 @@ app.post("/produtos/:id/venda", auth, (req, res) => {
   const lucro = faturamento - custo;
 
   produto.vendidos += quantidade;
-  produto.faturamento = (produto.faturamento || 0) + faturamento;
-  produto.custo = (produto.custo || 0) + custo;
-  produto.lucro = (produto.lucro || 0) + lucro;
+  produto.faturamento += faturamento;
+  produto.custo += custo;
+  produto.lucro += lucro;
 
   db.relatorios[mes].faturamento += faturamento;
   db.relatorios[mes].custo += custo;
@@ -617,13 +709,7 @@ app.post("/relatorio/fechar", auth, (req, res) => {
   res.send("Mês fechado");
 });
 
-app.get("/relatorio/pdf", (req, res) => {
-  try {
-    jwt.verify(req.query.token || req.headers.authorization, SECRET);
-  } catch {
-    return res.status(401).send("Token inválido");
-  }
-
+app.get("/relatorio/pdf", auth, (req, res) => {
   const mes = getMesAtual();
   garantirRelatorio(mes);
 
@@ -635,6 +721,8 @@ app.get("/relatorio/pdf", (req, res) => {
 
   doc.fontSize(20).text("Relatório " + mes);
   doc.moveDown();
+  doc.text("Que Deus nos abençoe em cada decisão.");
+  doc.moveDown();
   doc.text("Faturamento: " + r.faturamento);
   doc.text("Custo: " + r.custo);
   doc.text("Lucro: " + r.lucro);
@@ -643,7 +731,7 @@ app.get("/relatorio/pdf", (req, res) => {
   doc.end();
 });
 
-app.get("/debug", (req, res) => {
+app.get("/debug", auth, (req, res) => {
   res.json(db);
 });
 
