@@ -486,17 +486,67 @@ function limparCabelo(){
 }
 
 function montarEditorCodigos(itens){
-  editorCodigos.innerHTML = "<h4>Status dos códigos</h4>" + itens.map(function(i){
-    return '<div class="codigo-line"><span>'+i.codigo+'</span><select data-codigo="'+i.codigo+'"><option '+(i.status==="disponivel"?"selected":"")+' value="disponivel">Disponível</option><option '+(i.status==="reservado"?"selected":"")+' value="reservado">Reservado</option><option '+(i.status==="vendido"?"selected":"")+' value="vendido">Vendido</option></select></div>';
-  }).join("");
+  editorCodigos.innerHTML = "<h4>Status dos códigos</h4>";
+
+  itens.forEach(function(i){
+    adicionarLinhaCodigo(i.codigo, i.status);
+  });
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn btn-light";
+  btn.innerText = "+ Adicionar código";
+  btn.onclick = adicionarNovoCodigo;
+
+  editorCodigos.appendChild(btn);
+}
+
+function adicionarLinhaCodigo(codigo = "", status = "disponivel"){
+  const div = document.createElement("div");
+  div.className = "codigo-line";
+
+  div.innerHTML = `
+    <input value="${codigo}" placeholder="Código">
+    <select>
+      <option value="disponivel" ${status === "disponivel" ? "selected" : ""}>Disponível</option>
+      <option value="reservado" ${status === "reservado" ? "selected" : ""}>Reservado</option>
+      <option value="vendido" ${status === "vendido" ? "selected" : ""}>Vendido</option>
+    </select>
+    <button type="button" class="btn btn-red" onclick="this.parentElement.remove()">Remover</button>
+  `;
+
+  editorCodigos.insertBefore(div, editorCodigos.lastElementChild);
+}
+
+function adicionarNovoCodigo(){
+  adicionarLinhaCodigo("", "disponivel");
 }
 
 function pegarCodigosEditados(){
-  const selects = editorCodigos.querySelectorAll("select");
-  if(selects.length){
-    return Array.from(selects).map(s=>({codigo:s.dataset.codigo,status:s.value}));
+  const linhas = editorCodigos.querySelectorAll(".codigo-line");
+
+  if(linhas.length){
+    return Array.from(linhas)
+      .map(linha => {
+        const codigo = linha.querySelector("input").value.trim();
+        const status = linha.querySelector("select").value;
+
+        return {
+          codigo,
+          status
+        };
+      })
+      .filter(item => item.codigo.length > 0);
   }
-  return codigosCabelo.value.split(",").map(c=>c.trim()).filter(Boolean).map(c=>({codigo:c,status:"disponivel"}));
+
+  return codigosCabelo.value
+    .split(",")
+    .map(c => c.trim())
+    .filter(Boolean)
+    .map(codigo => ({
+      codigo,
+      status: "disponivel"
+    }));
 }
 
 async function salvarCabelo(){
